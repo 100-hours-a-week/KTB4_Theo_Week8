@@ -33,12 +33,4 @@ public class Reply {
     public void update(String content) {
         this.content = content;
     }
-
-    public void delete() {
-        this.isReplyDeleted = true;
-    }
-
-    public void authorDeleted() {
-        this.isAuthorDeleted = true;
-    }
 }

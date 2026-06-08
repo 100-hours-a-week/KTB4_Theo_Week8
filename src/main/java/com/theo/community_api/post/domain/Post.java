@@ -61,10 +61,6 @@ public class Post {
         }
     }
 
-    public void deleteAuthor() {
-        this.isAuthorDeleted = true;
-    }
-
     public void increaseCommentCount() {
         this.commentCount++;
     }

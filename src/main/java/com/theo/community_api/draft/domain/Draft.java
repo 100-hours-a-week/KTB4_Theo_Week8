@@ -23,14 +23,6 @@ public class Draft {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public boolean isEmptyDraft() {
-        return isBlank(title) && isBlank(content);
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
     public void update(String title, String content) {
         this.title = title;
         this.content = content;
