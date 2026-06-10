@@ -1,12 +1,10 @@
 package com.theo.community_api.draft.service;
 
+import com.theo.community_api.common.exception.*;
 import com.theo.community_api.draft.domain.Draft;
 import com.theo.community_api.draft.dto.DraftRequest;
 import com.theo.community_api.draft.dto.DraftResponse;
 import com.theo.community_api.draft.repository.DraftRepository;
-import com.theo.community_api.common.exception.BadRequestException;
-import com.theo.community_api.common.exception.ConflictException;
-import com.theo.community_api.common.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,11 +18,12 @@ public class DraftService {
     public DraftResponse createDraft(Long loginUserId, DraftRequest request) {
         // 제목 또는 내용 비어있는 경우
         if (isEmptyDraft(request.getTitle(), request.getContent())) {
-            throw new BadRequestException("empty_draft_content");
+            throw new BusinessException(ErrorCode.EMPTY_DRAFT_CONTENT);
         }
+
         // 이미 임시글이 있는데 다시 생성하려는 경우
         if (draftRepository.findById(loginUserId).isPresent()) {
-            throw new ConflictException("draft_already_exists");
+            throw new BusinessException(ErrorCode.DRAFT_ALREADY_EXISTS);
         }
 
         Draft draft = draftRepository.save(loginUserId, request.getTitle(), request.getContent());
@@ -35,11 +34,11 @@ public class DraftService {
     // 임시글 덮어쓰기
     public DraftResponse updateDraft(Long loginUserId, DraftRequest request) {
         if (isEmptyDraft(request.getTitle(), request.getContent())) {
-            throw new BadRequestException("empty_draft_content");
+            throw new BusinessException(ErrorCode.EMPTY_DRAFT_CONTENT);
         }
 
         Draft draft = draftRepository.findById(loginUserId)
-                .orElseThrow(() -> new NotFoundException("draft_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.DRAFT_NOT_FOUND));
 
         draft.update(request.getTitle(), request.getContent());
 
@@ -50,7 +49,7 @@ public class DraftService {
     public DraftResponse readDraft(Long loginUserId) {
 
         Draft draft = draftRepository.findById(loginUserId)
-                .orElseThrow(() -> new NotFoundException("draft_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.DRAFT_NOT_FOUND));
 
         return DraftResponse.from(draft);
     }
@@ -59,7 +58,7 @@ public class DraftService {
     public void deleteDraft(Long loginUserId) {
 
         Draft draft = draftRepository.findById(loginUserId)
-                .orElseThrow(() -> new NotFoundException("draft_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.DRAFT_NOT_FOUND));
 
         draftRepository.deleteById(loginUserId);
     }

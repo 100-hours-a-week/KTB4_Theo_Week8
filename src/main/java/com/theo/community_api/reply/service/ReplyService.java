@@ -2,8 +2,8 @@ package com.theo.community_api.reply.service;
 
 import com.theo.community_api.comment.domain.Comment;
 import com.theo.community_api.comment.repository.CommentRepository;
-import com.theo.community_api.common.exception.ForbiddenException;
-import com.theo.community_api.common.exception.NotFoundException;
+import com.theo.community_api.common.exception.BusinessException;
+import com.theo.community_api.common.exception.ErrorCode;
 import com.theo.community_api.reply.domain.Reply;
 import com.theo.community_api.reply.dto.ReplyCreateRequest;
 import com.theo.community_api.reply.dto.ReplyUpdateRequest;
@@ -21,7 +21,7 @@ public class ReplyService {
     public Long createReply(Long loginUserId, Long postId, Long commentId, ReplyCreateRequest request) {
         // 게시물ID, 댓글ID, 대댓글ID 모두 일치하는지 확인
         Comment comment = commentRepository.findByPostIdAndCommentId(postId, commentId)
-                .orElseThrow(() -> new NotFoundException("comment_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
         Reply reply = replyRepository.save(commentId, postId, loginUserId, request.getContent());
 
@@ -31,10 +31,10 @@ public class ReplyService {
     // 대댓글 수정
     public void updateReply(Long loginUserId, Long postId, Long commentId, Long replyId, ReplyUpdateRequest request) {
         Reply reply = replyRepository.findByPostIdAndCommentIdAndReplyId(postId, commentId, replyId)
-                .orElseThrow(() -> new NotFoundException("reply_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPLY_NOT_FOUND));
 
         if (!reply.getUserId().equals(loginUserId)) {
-            throw new ForbiddenException("reply_modify_forbidden");
+            throw new BusinessException(ErrorCode.REPLY_MODIFY_FORBIDDEN);
         }
 
         reply.update(request.getContent());
@@ -43,10 +43,10 @@ public class ReplyService {
     // 대댓글 삭제
     public void deleteReply(Long loginUserId, Long postId, Long commentId, Long replyId) {
         Reply reply = replyRepository.findByPostIdAndCommentIdAndReplyId(postId, commentId, replyId)
-                .orElseThrow(() -> new NotFoundException("reply_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPLY_NOT_FOUND));
 
         if (!reply.getUserId().equals(loginUserId)) {
-            throw new ForbiddenException("reply_delete_forbidden");
+            throw new BusinessException(ErrorCode.REPLY_DELETE_FORBIDDEN);
         }
 
         replyRepository.deleteById(replyId);

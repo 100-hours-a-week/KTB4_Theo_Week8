@@ -27,38 +27,32 @@ public class ReplyRepository {
         return reply;
     }
 
-    // 대댓글 ID로 대댓글 찾기
-    public Optional<Reply> findById(Long replyId){
-        return Optional.ofNullable(replyRepository.get(replyId));
-    }
-
     // 댓글 ID에 매핑되는 대댓글 ID 리스트 반환하기
     public List<Reply> findAllByCommentId(Long commentId){
         List<Long> replyIds = commentReplyIndex.getOrDefault(commentId, new ArrayList<>());
         List<Reply> replies = new ArrayList<>();
         for(Long replyId : replyIds){
             Reply reply = replyRepository.get(replyId);
-            if(reply!=null){
-                replies.add(reply);
+            if(reply==null){
+                continue;
             }
+
+            if(reply.isDeleted()){
+                continue;
+            }
+
+            replies.add(reply);
         }
         return replies;
     }
 
     // 특정 대댓글 삭제
     public void deleteById(Long replyId){
-        Reply reply = replyRepository.remove(replyId);
-        if(reply == null){
+        Reply reply = replyRepository.get(replyId);
+        if(reply == null) {
             return;
         }
-        // 대댓글 ID 리스트에서 해당 대댓글 ID 삭제
-        List<Long> replyIds = commentReplyIndex.get(reply.getCommentId());
-        if(replyIds != null) {
-            replyIds.remove(replyId);
-            if(replyIds.isEmpty()){
-                commentReplyIndex.remove(reply.getCommentId());
-            }
-        }
+        reply.delete();
     }
 
     // postId, commentId, replyId가 모두 일치하는 대댓글 찾기

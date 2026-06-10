@@ -30,8 +30,12 @@ public class PostRepository {
 
     // 게시글 삭제
     public void deleteById(Long postId){
-        postRepository.remove(postId);
+        Post post = postRepository.get(postId);
+
+        if(post==null){
+            return;
+        }
+
+        post.delete();
     }
-
-
 }

@@ -1,10 +1,7 @@
 package com.theo.community_api.user.service;
 
 import com.theo.community_api.auth.service.AuthService;
-import com.theo.community_api.common.exception.BadRequestException;
-import com.theo.community_api.common.exception.ConflictException;
-import com.theo.community_api.common.exception.NotFoundException;
-import com.theo.community_api.common.exception.UnauthorizedException;
+import com.theo.community_api.common.exception.*;
 import com.theo.community_api.user.domain.User;
 import com.theo.community_api.user.dto.*;
 import com.theo.community_api.user.repository.UserRepository;
@@ -21,17 +18,17 @@ public class UserService {
     public Long signup(SignupRequest request) {
         // 비밀번호, 재입력 비밀번호가 같은지 확인
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
-            throw new BadRequestException("password_mismatch");
+            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
 
         // 이메일 중복확인
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ConflictException("email_already_exist");
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXIST);
         }
 
         // 닉네임 중복확인
         if (userRepository.existsByNickname(request.getNickname())) {
-            throw new ConflictException("nickname_already_exist");
+            throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXIST);
         }
 
         // 사용자 추가
@@ -48,17 +45,13 @@ public class UserService {
     public String login(LoginRequest request) {
         // 이메일로 사용자 찾기
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UnauthorizedException("invalid_credentials"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
         // 비밀번호와 유저 비밀번호가 같은지 확인
         if (!user.getPassword().equals(request.getPassword())) {
-            throw new UnauthorizedException("invalid_credentials");
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        // 탈퇴한 회원은 재로그인 불가
-        if(user.isDeleted()){
-            throw new UnauthorizedException("invalid_credentials");
-        }
         return authService.createSession(user.getUserId()); // 세션 ID 반환
     }
 
@@ -66,17 +59,21 @@ public class UserService {
     public UserUpdateResponse updateUser(Long loginUserId, UserUpdateRequest request) {
         // 유저 존재여부 확인
         User user = userRepository.findById(loginUserId)
-                .orElseThrow(() -> new NotFoundException("user_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 삭제된 유저가 요청 시
         if(user.isDeleted()){
-            throw new UnauthorizedException("unauthorized_request");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_REQUEST);
         }
 
-        // 닉네임 중복여부 확인
-        if (userRepository.existsByNickname(request.getNickname())
-                && user.getNickname().equals(request.getNickname())) {
-            throw new ConflictException("nickname_already_exist");
+        // 현재 닉네임과 동일한 경우
+        if (user.getNickname().equals(request.getNickname())) {
+            throw new BusinessException(ErrorCode.SAME_NICKNAME);
+        }
+
+        // 다른 사용자가 이미 사용 중인 닉네임인 경우
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXIST);
         }
 
         // 회원정보 갱신
@@ -89,10 +86,10 @@ public class UserService {
     public void updatePassword(Long loginUserId, PasswordUpdateRequest request) {
 
         User user = userRepository.findById(loginUserId)
-                .orElseThrow(() -> new NotFoundException("user_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
-            throw new BadRequestException("password_mismatch");
+            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
 
         user.updatePassword(request.getPassword());
@@ -101,11 +98,11 @@ public class UserService {
     // 회원 탈퇴
     public void deleteUser(Long loginUserId) {
         User user = userRepository.findById(loginUserId)
-                .orElseThrow(() -> new NotFoundException("user_not_found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 이미 삭제된 유저라면
         if(user.isDeleted()){
-            throw new NotFoundException("user_not_found");
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
         user.delete();

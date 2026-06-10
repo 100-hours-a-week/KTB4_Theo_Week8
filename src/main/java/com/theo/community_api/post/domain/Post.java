@@ -14,12 +14,11 @@ public class Post {
     private String content;
     private String postImage;
 
-    private int likeCount;
     private int commentCount;
     private int viewCount;
 
+    private boolean isDeleted;
     private boolean isEdited;
-    private boolean isAuthorDeleted;
     private boolean isBlinded;
 
     private int reportedCount;
@@ -32,11 +31,11 @@ public class Post {
         this.title = title;
         this.content = content;
         this.postImage = postImage;
-        this.likeCount = 0;
+//        this.likeCount = 0;
         this.commentCount = 0;
         this.viewCount = 0;
+        this.isDeleted = false;
         this.isEdited = false;
-        this.isAuthorDeleted = false;
         this.isBlinded = false;
         this.reportedCount = 0;
         this.createdAt = LocalDateTime.now();
@@ -67,5 +66,9 @@ public class Post {
 
     public void decreaseCommentCount(){
         this.commentCount--;
+    }
+
+    public void delete(){
+        this.isDeleted = true; // soft delete 방식 사ㅇ
     }
 }

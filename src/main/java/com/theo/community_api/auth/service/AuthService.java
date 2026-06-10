@@ -2,7 +2,8 @@ package com.theo.community_api.auth.service;
 
 import com.theo.community_api.auth.domain.LoginSession;
 import com.theo.community_api.auth.repository.SessionRepository;
-import com.theo.community_api.common.exception.UnauthorizedException;
+import com.theo.community_api.common.exception.BusinessException;
+import com.theo.community_api.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,18 +27,18 @@ public class AuthService {
     // 세션 ID를 통해 userID 조회
     public Long getLoginUserId(String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
-            throw new UnauthorizedException("unauthorized_request");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_REQUEST);
         }
 
         LoginSession session = sessionRepository.findBySessionId(sessionId)
-                .orElseThrow(() -> new UnauthorizedException("unauthorized_request"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED_REQUEST));
 
         return session.getUserId();
     }
 
     public void logout(String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
-            throw new UnauthorizedException("unauthorized_request");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_REQUEST);
         }
 
         sessionRepository.deleteBySessionId(sessionId);

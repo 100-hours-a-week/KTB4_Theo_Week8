@@ -17,7 +17,7 @@ public class PostDetailResponse { // 게시물 상세조회
     private String profileImage;
     private String postImage;
 
-    private int likeCount;
+//    private int likeCount;
     private int commentCount;
     private int viewCount;
 
@@ -25,7 +25,7 @@ public class PostDetailResponse { // 게시물 상세조회
     private boolean isAuthorDeleted;
     private boolean isBlinded;
 
-    private int reportedCount;
+//    private int reportedCount;
 
     private List<PostCommentResponse> comments;
 
@@ -47,13 +47,13 @@ public class PostDetailResponse { // 게시물 상세조회
                 nickname,
                 profileImage,
                 post.getPostImage(),
-                post.getLikeCount(),
+//                post.getLikeCount(),
                 post.getCommentCount(),
                 post.getViewCount(),
                 post.isEdited(),
                 isAuthorDeleted,
                 post.isBlinded(),
-                post.getReportedCount(),
+//                post.getReportedCount(),
                 comments
         );
     }

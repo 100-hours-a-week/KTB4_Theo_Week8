@@ -13,8 +13,8 @@ public class Comment {
 
     private String content;
 
-    private boolean isAuthorDeleted;
     private boolean isCommentDeleted;
+    private boolean isDeletedByPost;
 
     private LocalDateTime createdAt;
 
@@ -23,8 +23,8 @@ public class Comment {
         this.postId = postId;
         this.userId = userId;
         this.content = content;
-        this.isAuthorDeleted = false;
         this.isCommentDeleted = false;
+        this.isDeletedByPost = false;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -32,8 +32,12 @@ public class Comment {
         this.content = content;
     }
 
-    public void deleteWithReplies() { // 대댓글이 존재하는 경우에는 삭제되어서는 안되므로
+    public void deleteKeepReplies() { // 대댓글이 존재하는 경우에는 삭제되어서는 안되므로
         this.content = "삭제된 댓글입니다.";
         this.isCommentDeleted = true;
+    }
+
+    public void deleteByPostDeleted(){
+        this.isDeletedByPost = true;
     }
 }

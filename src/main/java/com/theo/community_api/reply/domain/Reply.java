@@ -14,7 +14,6 @@ public class Reply {
 
     private String content;
 
-    private boolean isAuthorDeleted;
     private boolean isReplyDeleted;
 
     private LocalDateTime createdAt;
@@ -25,12 +24,19 @@ public class Reply {
         this.commentId = commentId;
         this.userId = userId;
         this.content = content;
-        this.isAuthorDeleted = false;
         this.isReplyDeleted = false;
         this.createdAt = LocalDateTime.now();
     }
 
     public void update(String content) {
         this.content = content;
+    }
+
+    public void delete(){
+        this.isReplyDeleted = true;
+    }
+
+    public boolean isDeleted(){
+        return isReplyDeleted;
     }
 }

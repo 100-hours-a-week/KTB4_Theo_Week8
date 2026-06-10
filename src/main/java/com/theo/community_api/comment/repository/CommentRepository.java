@@ -28,37 +28,32 @@ public class CommentRepository {
         return comment;
     }
 
-    // 특정 댓글 찾기
-    public Optional<Comment> findById(Long commentId){
-        return Optional.ofNullable(commentRepository.get(commentId));
-    }
-
     // 특정 게시물에 대한 댓글리스트 반환
     public List<Comment> findAllByPostId(Long postId){
         List<Long> commentIds = postCommentIndex.getOrDefault(postId, new ArrayList<>()); // 해당 게시물의 댓글 ID 가져오기
         List<Comment> comments = new ArrayList<>();
         for(Long commentId : commentIds){
             Comment comment = commentRepository.get(commentId);
-            if(comment!=null){
-                comments.add(comment);
+            if(comment==null){
+                continue;
             }
+
+            if(comment.isCommentDeleted()){
+                continue;
+            }
+
+            comments.add(comment);
         }
         return comments;
     }
 
     // 특정 게시물 삭제 (댓글 삭제 + 댓글 ID 목록에서 삭제)
     public void deleteById(Long commentId){
-        Comment comment = commentRepository.remove(commentId); // 삭제한 댓글 가져오기
+        Comment comment = commentRepository.get(commentId); // 삭제할 댓글 가져오기
         if(comment==null){
             return;
         }
-        List<Long> commentIds = postCommentIndex.get(comment.getPostId());
-        if(commentIds!=null){
-            commentIds.remove(commentId); // 댓글 ID 리스트에서 해당 댓글 ID 삭제하기
-            if(commentIds.isEmpty()){
-                postCommentIndex.remove(comment.getPostId());
-            }
-        }
+        comment.deleteByPostDeleted(); // 대댓글과 함께 안보이도록
     }
 
     // postId와 commentId가 모두 일치하는 댓글 찾기

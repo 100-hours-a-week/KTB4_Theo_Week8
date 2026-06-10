@@ -1,0 +1,47 @@
+package com.theo.community_api.common.exception;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@RequiredArgsConstructor
+public enum ErrorCode {
+    // 400
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "invalid_request"),
+    PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "password_mismatch"),
+    EMPTY_DRAFT_CONTENT(HttpStatus.BAD_REQUEST, "empty_draft_content"),
+
+    // 401
+    UNAUTHORIZED_REQUEST(HttpStatus.UNAUTHORIZED, "unauthorized_request"),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "invalid_credentials"),
+
+    // 403
+    POST_BLINDED(HttpStatus.FORBIDDEN, "post_blinded"),
+    POST_MODIFY_FORBIDDEN(HttpStatus.FORBIDDEN, "post_modify_forbidden"),
+    POST_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "post_delete_forbidden"),
+    COMMENT_UPDATE_FORBIDDEN(HttpStatus.FORBIDDEN, "comment_update_forbidden"),
+    COMMENT_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "comment_delete_forbidden"),
+    REPLY_MODIFY_FORBIDDEN(HttpStatus.FORBIDDEN, "reply_modify_forbidden"),
+    REPLY_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "reply_delete_forbidden"),
+
+    // 404
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "user_not_found"),
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "post_not_found"),
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "comment_not_found"),
+    REPLY_NOT_FOUND(HttpStatus.NOT_FOUND, "reply_not_found"),
+    DRAFT_NOT_FOUND(HttpStatus.NOT_FOUND, "draft_not_found"),
+
+    // 409
+    EMAIL_ALREADY_EXIST(HttpStatus.CONFLICT, "email_already_exist"),
+    NICKNAME_ALREADY_EXIST(HttpStatus.CONFLICT, "nickname_already_exist"),
+    SAME_NICKNAME(HttpStatus.CONFLICT, "same_nickname"),
+    DUPLICATE_REPORT(HttpStatus.CONFLICT, "duplicate_report"),
+    DRAFT_ALREADY_EXISTS(HttpStatus.CONFLICT, "draft_already_exists"),
+
+    // 500
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "internal_server_error");
+
+    private final HttpStatus status;
+    private final String message;
+}
