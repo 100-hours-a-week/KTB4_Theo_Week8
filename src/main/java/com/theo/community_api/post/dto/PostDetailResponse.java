@@ -15,9 +15,9 @@ public class PostDetailResponse { // 게시물 상세조회
     private String content;
     private String nickname;
     private String profileImage;
-    private String postImage;
 
-//    private int likeCount;
+    private int likeCount;
+    private boolean liked;
     private int commentCount;
     private int viewCount;
 
@@ -25,11 +25,15 @@ public class PostDetailResponse { // 게시물 상세조회
     private boolean isAuthorDeleted;
     private boolean isBlinded;
 
-//    private int reportedCount;
-
+    private List<String> imageUrls;
     private List<PostCommentResponse> comments;
 
-    public static PostDetailResponse from(Post post, User user, List<PostCommentResponse> comments) {
+    public static PostDetailResponse from(
+            Post post
+            , User user
+            , boolean liked
+            , List<String> imageUrls
+            , List<PostCommentResponse> comments) {
         String nickname = "알 수 없음";
         String profileImage = null;
         boolean isAuthorDeleted = true;
@@ -41,19 +45,19 @@ public class PostDetailResponse { // 게시물 상세조회
         }
 
         return new PostDetailResponse(
-                post.getPostId(),
+                post.getId(),
                 post.getTitle(),
                 post.getContent(),
                 nickname,
                 profileImage,
-                post.getPostImage(),
-//                post.getLikeCount(),
+                post.getLikeCount(),
+                liked,
                 post.getCommentCount(),
                 post.getViewCount(),
                 post.isEdited(),
                 isAuthorDeleted,
                 post.isBlinded(),
-//                post.getReportedCount(),
+                imageUrls,
                 comments
         );
     }

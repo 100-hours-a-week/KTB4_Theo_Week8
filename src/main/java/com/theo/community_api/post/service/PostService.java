@@ -3,72 +3,73 @@ package com.theo.community_api.post.service;
 import com.theo.community_api.comment.domain.Comment;
 import com.theo.community_api.comment.repository.CommentRepository;
 import com.theo.community_api.common.exception.*;
-import com.theo.community_api.post.domain.Post;
+import com.theo.community_api.post.domain.*;
 import com.theo.community_api.post.dto.*;
-import com.theo.community_api.post.repository.PostReportRepository;
-import com.theo.community_api.post.repository.PostRepository;
+import com.theo.community_api.post.repository.*;
 import com.theo.community_api.reply.domain.Reply;
 import com.theo.community_api.reply.repository.ReplyRepository;
 import com.theo.community_api.user.domain.User;
 import com.theo.community_api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final ReplyRepository replyRepository;
-    private final PostReportRepository postReportRepository;
+    private final PostImageRepository postImageRepository;
+    private final PostLikeRepository postLikeRepository;
+    private final PostViewRepository postViewRepository;
+    private final PostRevisionRepository postRevisionRepository;
 
     // 게시글 추가
+    @Transactional
     public Long createPost(Long loginUserId, PostCreateRequest request) {
-        Post post = postRepository.save(
-                loginUserId,
+        User user = userRepository.findById(loginUserId)
+                .orElseThrow(()->new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if(user.isDeleted()){
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_REQUEST);
+        }
+
+        Post post = new Post(
+                user,
                 request.getTitle(),
-                request.getContent(),
-                request.getPostImage()
+                request.getContent()
         );
 
-        return post.getPostId();
+        Post savedPost = postRepository.save(post);
+        savePostImages(savedPost, request.getImageUrls());
+
+        return savedPost.getId();
     }
 
     // 게시글 목록 조회
     public PostListResponse readPostList(Long lastPostId, int size) {
-        List<Post> allPosts = postRepository.findAll();
+        PageRequest pageRequest = PageRequest.of(0, size + 1);
 
         // postId 기준 내림차순 정렬 (최신 게시물부터 나오도록)
-        allPosts.sort(new Comparator<Post>() {
-            @Override
-            public int compare(Post o1, Post o2) {
-                return o2.getPostId().compareTo(o1.getPostId());
-            }
-        });
+        List<Post> findPosts;
+
+        if(lastPostId == null){
+            findPosts = postRepository.findFirstPage(pageRequest);
+        }else{
+            findPosts = postRepository.findNextPage(lastPostId, pageRequest);
+        }
 
         List<PostSummaryResponse> posts = new ArrayList<>();
 
-        for (Post post : allPosts) {
-            if (post.isDeleted()) { // soft delete 된 게시물은 안보이도록 하기
-                continue;
-            }
-            // 추가 조회시 lastPostId보다 작은 게시물부터 조회
-            if (lastPostId != null && post.getPostId() >= lastPostId) {
-                continue;
-            }
-
-            User user = userRepository.findById(post.getUserId()).orElse(null);
-
-            posts.add(PostSummaryResponse.from(post, user));
-
-            if (posts.size() == size + 1) {
-                break;
-            }
+        for(Post post : findPosts){
+            posts.add(PostSummaryResponse.from(post, post.getUser()));
         }
 
         boolean hasNext = false;
@@ -80,66 +81,69 @@ public class PostService {
             // 마지막 1개 제거
             posts.remove(posts.size() - 1);
         }
+
         // 다음에 조회할 첫 게시물 ID
         Long newLastPostId = null;
+
         if (!posts.isEmpty()) {
-            newLastPostId =
-                    posts.get(posts.size() - 1).getPostId();
+            newLastPostId = posts.get(posts.size() - 1).getPostId();
         }
 
         return new PostListResponse(posts, hasNext, newLastPostId);
     }
 
     // 게시글 상세 조회
-    public PostDetailResponse readPostDetail(Long postId) {
-        Post post = postRepository.findById(postId)
+    @Transactional
+    public PostDetailResponse readPostDetail(Long loginUserId, Long postId) {
+        Post post = postRepository.findByIdWithUser(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-
-        if (post.isDeleted()) { // soft delete 된 게시물 안보이도록 설정
-            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
-        }
 
         if (post.isBlinded()) {
             throw new BusinessException(ErrorCode.POST_BLINDED);
         }
 
-        post.increaseViewCount();
+        // 조회수 증가 (같은 사용자는 24시간 이상 지나야 증가)
+        increaseViewCountIfPossible(post, loginUserId);
 
-        User postAuthor = userRepository.findById(post.getUserId())
-                .orElse(null);
+        User postAuthor = post.getUser();
 
-        List<Comment> comments = commentRepository.findAllByPostId(postId);
+        List<Comment> comments = commentRepository.findAllByPostIdWithUser(postId);
+        List<Reply> replies = replyRepository.findAllByPostIdWithUserAndComment(postId);
+
+        Map<Long, List<Reply>> repliesByCommentId = new HashMap<>();
+
         List<PostCommentResponse> commentResponses = new ArrayList<>();
 
-        for (Comment comment : comments) { // 댓글 리스트 가져오기
-            if (comment.isDeletedByPost()) {
-                continue;
+        for (Reply reply : replies) {
+            Long commentId = reply.getComment().getId();
+
+            List<Reply> replyList = repliesByCommentId.get(commentId);
+
+            if (replyList == null) {
+                replyList = new ArrayList<>();
+                repliesByCommentId.put(commentId, replyList);
             }
 
-            User commentAuthor = userRepository.findById(comment.getUserId())
-                    .orElse(null);
+            replyList.add(reply);
+        }
 
-            List<Reply> replies = replyRepository.findAllByCommentId(comment.getCommentId());
+        for (Comment comment : comments) { // 댓글 리스트 가져오기
+            User commentAuthor = comment.getUser();
 
+            List<Reply> commentReplies = repliesByCommentId.getOrDefault(comment.getId(), new ArrayList<>());
             List<PostReplyResponse> replyResponses = new ArrayList<>();
 
-            for (Reply reply : replies) { // 대댓글 리스트 가져오기
-                if (reply.isDeleted()) {
-                    continue;
-                }
-
-                // 댓글이 삭제됐고, 살아있는 대댓글도 없으면 화면에서 숨긴다
-                if (comment.isCommentDeleted() && replyResponses.isEmpty()) {
-                    continue;
-                }
-
-
-                User replyAuthor = userRepository.findById(reply.getUserId())
-                        .orElse(null);
+            for (Reply reply : commentReplies) { // 대댓글 리스트 가져오기
+                User replyAuthor = reply.getUser();
 
                 replyResponses.add(
                         PostReplyResponse.from(reply, replyAuthor)
                 );
+            }
+
+            // 부모 댓글이 삭제되고, 대댓글도 없다면 가져오지 않도록 한다.
+            if(comment.isDeleted() && replyResponses.isEmpty()){
+                continue;
             }
 
             commentResponses.add(
@@ -147,70 +151,140 @@ public class PostService {
             );
         }
 
-        return PostDetailResponse.from(post, postAuthor, commentResponses);
+        // 이미지 처리
+        List<PostImage> postImages = postImageRepository.findAllByPost_IdOrderByImageOrderAsc(postId);
+
+        List<String> imageUrls = new ArrayList<>();
+
+        for (PostImage postImage : postImages) {
+            imageUrls.add(postImage.getImageUrl());
+        }
+
+        boolean liked = postLikeRepository.existsByPostIdAndUserId(postId, loginUserId);
+
+        return PostDetailResponse.from(post, postAuthor, liked, imageUrls, commentResponses);
     }
 
     // 게시글 수정
+    @Transactional
     public PostUpdateResponse updatePost(Long loginUserId, Long postId, PostUpdateRequest request) {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findByIdWithUser(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-        if (!post.getUserId().equals(loginUserId)) {
+
+        if (!post.getUser().getId().equals(loginUserId)) {
             throw new BusinessException(ErrorCode.POST_MODIFY_FORBIDDEN);
         }
-        post.update(request.getTitle(), request.getContent(), request.getPostImage());
+
+        // 게시글 수정 전 기존 제목/내용을 수정이력으로 저장
+        PostRevision postRevision = PostRevision.from(post);
+        postRevisionRepository.save(postRevision);
+
+        // 게시글 현재 내용 수정
+        post.update(request.getTitle(), request.getContent());
+
+        // 기존 이미지 삭제 후 새로운 이미지로 저장 (개선필요 부분)
+        postImageRepository.deleteAllByPost_Id(postId);
+        savePostImages(post, request.getImageUrls());
 
         return new PostUpdateResponse(post.isEdited());
     }
 
     // 게시글 삭제
+    @Transactional
     public void deletePost(Long loginUserId, Long postId) {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findByIdWithUser(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-        if (post.isDeleted()){
-            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
-        }
-
-        if (!post.getUserId().equals(loginUserId)) {
+        if (!post.getUser().getId().equals(loginUserId)) {
             throw new BusinessException(ErrorCode.POST_DELETE_FORBIDDEN);
         }
 
-        postRepository.deleteById(postId);
-
-        List<Comment> comments = commentRepository.findAllByPostId(postId);
-
-        for (Comment comment : comments) {
-            comment.deleteByPostDeleted();
-
-            List<Reply> replies =
-                    replyRepository.findAllByCommentId(comment.getCommentId());
-
-            for (Reply reply : replies) {
-                reply.delete();
-            }
-        }
+        // 게시글 삭제 시 기존 이미지 모두 삭제
+        postImageRepository.deleteAllByPost_Id(postId);
+        post.delete();
     }
 
-    // 게시글 신고
-    public void reportPost(Long loginUserId, Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-
-        if(post.isDeleted()){
-            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+    private void savePostImages(Post post, List<String> imageUrls) {
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            return;
         }
 
-        if(post.isBlinded()){
+        List<PostImage> postImages = new ArrayList<>();
+
+        int imageOrder = 1;
+
+        for (String imageUrl : imageUrls) {
+            PostImage postImage = new PostImage(post, imageUrl, imageOrder);
+            postImages.add(postImage);
+            imageOrder++;
+        }
+
+        postImageRepository.saveAll(postImages);
+    }
+
+    // 게시글 좋아요 토글
+    @Transactional
+    public PostLikeResponse togglePostLike(Long loginUserId, Long postId) {
+        Post post = postRepository.findByIdWithUser(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+        if (post.isBlinded()) {
             throw new BusinessException(ErrorCode.POST_BLINDED);
         }
 
-        // 한 사용자가 같은 글에 중복되서 신고한 경우
-        if(postReportRepository.existsByPostIdAndUserId(postId, loginUserId)){
-            throw new BusinessException(ErrorCode.DUPLICATE_REPORT);
+        User user = userRepository.findById(loginUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.isDeleted()) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_REQUEST);
         }
 
-        postReportRepository.reportSave(postId, loginUserId);
+        Optional<PostLike> optionalPostLike =
+                postLikeRepository.findByPostIdAndUserId(postId, loginUserId);
 
-        post.increaseReportCount();
+        // 이미 좋아요 누른 상태에서 다시 누르면 이전 좋아요 이력 삭제, 좋아요 개수 감소
+        if (optionalPostLike.isPresent()) {
+            postLikeRepository.delete(optionalPostLike.get());
+            post.decreaseLikeCount();
+
+            return new PostLikeResponse(false, post.getLikeCount());
+        }
+
+        PostLike postLike = new PostLike(post, user);
+        postLikeRepository.save(postLike);
+        post.increaseLikeCount();
+
+        return new PostLikeResponse(true, post.getLikeCount());
+    }
+
+    // 게시글 조회 이력증가 (조회 시점으로부터 24시간마다 가능)
+    private void increaseViewCountIfPossible(Post post, Long loginUserId) {
+        User user = userRepository.findById(loginUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.isDeleted()) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_REQUEST);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        Optional<PostView> optionalPostView =
+                postViewRepository.findByPostIdAndUserId(post.getId(), loginUserId);
+
+        // 해당 게시글 조회이력이 비어있으면 새로운 이력 저장 및 조회수 증가
+        if (optionalPostView.isEmpty()) {
+            PostView postView = new PostView(post, user);
+            postViewRepository.save(postView);
+            post.increaseViewCount();
+            return;
+        }
+
+        PostView postView = optionalPostView.get();
+
+        // 현재 시간으로부터 이전 시간이 24시간이 지났다면 조회수 증가 및 viewedAt 갱신
+        if (postView.canIncreaseViewCount(now)) {
+            postView.updateViewedAt(now);
+            post.increaseViewCount();
+        }
     }
 }

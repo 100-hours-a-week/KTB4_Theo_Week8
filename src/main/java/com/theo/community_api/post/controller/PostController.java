@@ -3,6 +3,7 @@ package com.theo.community_api.post.controller;
 import com.theo.community_api.auth.service.AuthService;
 import com.theo.community_api.common.ApiResponse;
 import com.theo.community_api.post.dto.*;
+import com.theo.community_api.post.service.PostReportService;
 import com.theo.community_api.post.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class PostController {
     private final PostService postService;
     private final AuthService authService;
+    private final PostReportService postReportService;
 
     // 게시글 등록
     @PostMapping
@@ -50,8 +52,8 @@ public class PostController {
             @CookieValue(value = "JSESSIONID", required = false) String sessionId,
             @PathVariable Long postId
     ) {
-        authService.getLoginUserId(sessionId);
-        PostDetailResponse response = postService.readPostDetail(postId);
+        Long loginUserId = authService.getLoginUserId(sessionId);
+        PostDetailResponse response = postService.readPostDetail(loginUserId, postId);
         return ResponseEntity
                 .ok(ApiResponse.of("post_read_success", response));
     }
@@ -83,16 +85,33 @@ public class PostController {
                 .ok(ApiResponse.of("post_delete_success"));
     }
 
-    // 게시글 신고
-    @PostMapping("/{postId}/reports")
-    public ResponseEntity<ApiResponse<Void>> reportPost(
+    // 게시글 좋아요 토글
+    @PostMapping("/{postId}/likes")
+    public ResponseEntity<ApiResponse<PostLikeResponse>> togglePostLike(
             @CookieValue(value = "JSESSIONID", required = false) String sessionId,
             @PathVariable Long postId
     ) {
         Long loginUserId = authService.getLoginUserId(sessionId);
-        postService.reportPost(loginUserId, postId);
+        PostLikeResponse response = postService.togglePostLike(loginUserId, postId);
 
         return ResponseEntity
-                .ok(ApiResponse.of("post_report_success"));
+                .ok(ApiResponse.of("post_like_success", response));
+    }
+
+    // 게시글 신고
+    @PostMapping("/{postId}/reports")
+    public ResponseEntity<ApiResponse<PostReportResponse>> reportPost(
+            @PathVariable Long postId,
+            @CookieValue(value = "JSESSIONID", required = false) String sessionId,
+            @Valid @RequestBody PostReportRequest request
+    ){
+        Long loginUserId = authService.getLoginUserId(sessionId);
+
+        PostReportResponse response =
+                postReportService.reportPost(postId, loginUserId, request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.of("post_report_success", response));
     }
 }

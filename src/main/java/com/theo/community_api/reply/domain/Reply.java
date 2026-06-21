@@ -1,42 +1,60 @@
 package com.theo.community_api.reply.domain;
 
+import com.theo.community_api.comment.domain.Comment;
+import com.theo.community_api.user.domain.User;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Getter
+@Entity
+@Table(name = "replies")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Reply {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    private Long replyId;
-    private Long postId;
-    private Long commentId;
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "commentId", nullable = false)
+    private Comment comment;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userId", nullable = false)
+    private User user;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    private boolean isReplyDeleted;
-
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    public Reply(Long replyId, Long postId, Long commentId, Long userId, String content) {
-        this.replyId = replyId;
-        this.postId = postId;
-        this.commentId = commentId;
-        this.userId = userId;
+    @Column(nullable = true)
+    private LocalDateTime updatedAt;
+
+    @Column(nullable = true)
+    private LocalDateTime deletedAt;
+
+    public Reply(Comment comment, User user, String content) {
+        this.comment = comment;
+        this.user = user;
         this.content = content;
-        this.isReplyDeleted = false;
         this.createdAt = LocalDateTime.now();
     }
 
     public void update(String content) {
         this.content = content;
+        this.updatedAt = LocalDateTime.now();
     }
 
     public void delete(){
-        this.isReplyDeleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 
     public boolean isDeleted(){
-        return isReplyDeleted;
+        return deletedAt != null;
     }
 }

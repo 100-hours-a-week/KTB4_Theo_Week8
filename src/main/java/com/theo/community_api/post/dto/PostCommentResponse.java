@@ -37,17 +37,17 @@ public class PostCommentResponse {
 
         String content = comment.getContent();
 
-        if (comment.isCommentDeleted()) {
+        if (comment.isDeleted()) {
             content = "삭제된 댓글입니다.";
         }
 
         return new PostCommentResponse(
-                comment.getCommentId(),
+                comment.getId(),
                 nickname,
                 profileImage,
                 content,
                 isAuthorDeleted,
-                comment.isCommentDeleted(),
+                comment.isDeleted(),
                 comment.getCreatedAt(),
                 replies
         );

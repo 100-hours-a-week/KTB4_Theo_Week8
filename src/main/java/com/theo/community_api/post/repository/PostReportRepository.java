@@ -1,33 +1,17 @@
 package com.theo.community_api.post.repository;
 
-import org.springframework.stereotype.Repository;
+import com.theo.community_api.post.domain.PostReport;
+import com.theo.community_api.post.domain.PostReportStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 
-@Repository
-public class PostReportRepository {
+public interface PostReportRepository extends JpaRepository<PostReport, Long> {
 
-    private final Map<Long, Set<Long>> postReportIndex = new HashMap<>();
+    boolean existsByPostIdAndUserId(Long postId, Long userId);
 
-    public boolean existsByPostIdAndUserId(Long postId, Long userId) {
-        Set<Long> reporterIds = postReportIndex.get(postId);
+    long countByPostIdAndStatus(Long postId, PostReportStatus status);
 
-        if (reporterIds == null) {
-            return false;
-        }
-
-        return reporterIds.contains(userId);
-    }
-
-    public void reportSave(Long postId, Long userId) {
-        Set<Long> reporterIds =
-                postReportIndex.getOrDefault(postId, new HashSet<>());
-
-        reporterIds.add(userId);
-
-        postReportIndex.put(postId, reporterIds);
-    }
+    // 관리자 페이지 신고 목록 조회용 - PENDING, ACCEPTED, REJECTED 상태별 조회
+    List<PostReport> findAllByStatusOrderByReportedAtDesc(PostReportStatus status);
 }

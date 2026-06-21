@@ -7,14 +7,17 @@ import com.theo.community_api.user.dto.*;
 import com.theo.community_api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
     private final UserRepository userRepository;
     private final AuthService authService;
 
     // 회원가입
+    @Transactional
     public Long signup(SignupRequest request) {
         // 비밀번호, 재입력 비밀번호가 같은지 확인
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
@@ -32,16 +35,18 @@ public class UserService {
         }
 
         // 사용자 추가
-        User user = userRepository.save(
+        User user = new User(
                 request.getEmail(),
                 request.getPassword(),
                 request.getNickname(),
                 request.getProfileImage());
+        User savedUser = userRepository.save(user);
 
-        return user.getUserId();
+        return savedUser.getId();
     }
 
     // 로그인
+    @Transactional
     public String login(LoginRequest request) {
         // 이메일로 사용자 찾기
         User user = userRepository.findByEmail(request.getEmail())
@@ -52,10 +57,11 @@ public class UserService {
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        return authService.createSession(user.getUserId()); // 세션 ID 반환
+        return authService.createSession(user.getId()); // 세션 ID 반환
     }
 
     // 회원정보 수정
+    @Transactional
     public UserUpdateResponse updateUser(Long loginUserId, UserUpdateRequest request) {
         // 유저 존재여부 확인
         User user = userRepository.findById(loginUserId)
@@ -83,6 +89,7 @@ public class UserService {
     }
 
     // 비밀번호 수정
+    @Transactional
     public void updatePassword(Long loginUserId, PasswordUpdateRequest request) {
 
         User user = userRepository.findById(loginUserId)
@@ -96,6 +103,7 @@ public class UserService {
     }
 
     // 회원 탈퇴
+    @Transactional
     public void deleteUser(Long loginUserId) {
         User user = userRepository.findById(loginUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));

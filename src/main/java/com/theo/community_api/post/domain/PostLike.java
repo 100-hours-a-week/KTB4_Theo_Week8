@@ -1,4 +1,4 @@
-package com.theo.community_api.auth.domain;
+package com.theo.community_api.post.domain;
 
 import com.theo.community_api.user.domain.User;
 import jakarta.persistence.*;
@@ -9,35 +9,37 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="sessions")
+@Table(
+        name = "post_like",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "UK_POST_LIKE_POST_USER",
+                        columnNames = {"postId", "userId"}
+                )
+        }
+)
+
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LoginSession {
+public class PostLike {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 36, unique = true)
-    private String sessionId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "postId", nullable = false)
+    private Post post;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="userId", nullable = false)
+    @JoinColumn(name = "userId", nullable = false)
     private User user;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
-    private LocalDateTime expiredAt;
-
-    public LoginSession(String sessionId, User user, LocalDateTime expiredAt){
-        this.sessionId = sessionId;
+    public PostLike(Post post, User user) {
+        this.post = post;
         this.user = user;
         this.createdAt = LocalDateTime.now();
-        this.expiredAt = expiredAt;
-    }
-
-    public boolean isExpired(){
-        return expiredAt.isBefore(LocalDateTime.now());
     }
 }

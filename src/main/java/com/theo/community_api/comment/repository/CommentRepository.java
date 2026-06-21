@@ -1,73 +1,41 @@
 package com.theo.community_api.comment.repository;
 
 import com.theo.community_api.comment.domain.Comment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.*;
 
 @Repository
-public class CommentRepository {
-    private final Map<Long, Comment> commentRepository = new HashMap<>();
+public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-    // 특정 게시물ID에 따른 댓글ID 목록
-    private final Map<Long, List<Long>> postCommentIndex = new HashMap<>();
+    @Query("""
+        select c
+        from Comment c
+        join fetch c.user
+        where c.post.id = :postId
+        order by c.id asc
+    """) // 게시글 상세 조회 시 댓글 목록 조립 때 사용
+    List<Comment> findAllByPostIdWithUser(@Param("postId") Long postId); // 댓글을 조회하면서 user 정보를 함께 가져오기
 
-    private Long sequenceIndex = 1L;
-
-    public Comment save(Long postId, Long userId, String content){
-        Long commentId= sequenceIndex++;
-        Comment comment = new Comment(commentId, postId, userId, content);
-        commentRepository.put(commentId, comment);
-        List<Long> commentIds = postCommentIndex.get(postId);
-        if(commentIds == null){
-            commentIds = new ArrayList<>();
-            postCommentIndex.put(postId, commentIds);
-        }
-
-        commentIds.add(commentId); // 댓글 ID 리스트에 추가될 댓글 ID 저장
-        return comment;
-    }
-
-    // 특정 게시물에 대한 댓글리스트 반환
-    public List<Comment> findAllByPostId(Long postId){
-        List<Long> commentIds = postCommentIndex.getOrDefault(postId, new ArrayList<>()); // 해당 게시물의 댓글 ID 가져오기
-        List<Comment> comments = new ArrayList<>();
-        for(Long commentId : commentIds){
-            Comment comment = commentRepository.get(commentId);
-            if(comment==null){
-                continue;
-            }
-
-            if(comment.isCommentDeleted()){
-                continue;
-            }
-
-            comments.add(comment);
-        }
-        return comments;
-    }
-
-    // 특정 게시물 삭제 (댓글 삭제 + 댓글 ID 목록에서 삭제)
-    public void deleteById(Long commentId){
-        Comment comment = commentRepository.get(commentId); // 삭제할 댓글 가져오기
-        if(comment==null){
-            return;
-        }
-        comment.deleteByPostDeleted(); // 대댓글과 함께 안보이도록
-    }
-
-    // postId와 commentId가 모두 일치하는 댓글 찾기
-    public Optional<Comment> findByPostIdAndCommentId(Long postId, Long commentId) {
-        Comment comment = commentRepository.get(commentId);
-
-        if (comment == null) {
-            return Optional.empty();
-        }
-
-        if (!comment.getPostId().equals(postId)) {
-            return Optional.empty();
-        }
-
-        return Optional.of(comment);
-    }
+    @Query("""
+        select c
+        from Comment c
+        join fetch c.post
+        join fetch c.user
+        where c.id = :commentId
+          and c.post.id = :postId
+          and c.deletedAt is null
+          and c.post.deletedAt is null
+    """)
+    Optional<Comment> findActiveByPostIdAndCommentId(
+            /* 게시물 ID와 댓글 ID에 맞는 댓글을 가져오기
+               user 도 join fetch 한 이유? -> 댓글에 작성자 정보도 모두 포함되어야 하므로
+               만약 유저 데이터도 같이 안가져오면 N+1 발생..
+               post join fetch 한 이유? -> 댓글 삭제 시 해당 게시물 정보(commentCount)도 같이 가져와야 하니까.. */
+            @Param("postId") Long postId,
+            @Param("commentId") Long commentId
+    );
 }

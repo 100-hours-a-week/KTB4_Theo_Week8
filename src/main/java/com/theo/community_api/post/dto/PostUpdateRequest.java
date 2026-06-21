@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @NoArgsConstructor
 public class PostUpdateRequest {
@@ -16,5 +18,5 @@ public class PostUpdateRequest {
     @NotBlank(message = "blank_content")
     private String content;
 
-    private String postImage;
+    private List<String> imageUrls;
 }

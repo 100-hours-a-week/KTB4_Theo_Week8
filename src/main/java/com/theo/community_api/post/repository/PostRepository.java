@@ -1,41 +1,45 @@
 package com.theo.community_api.post.repository;
 
 import com.theo.community_api.post.domain.Post;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.*;
 
-@Repository
-public class PostRepository {
-    private final Map<Long, Post> postRepository = new HashMap<>();
-    private long sequenceIndex = 1L;
+public interface PostRepository extends JpaRepository<Post, Long> {
 
-    // 새로운 글 추가
-    public Post save(Long userId, String title, String content, String postImage){
-        Long postId = sequenceIndex++;
-        Post post = new Post(postId, userId, title, content, postImage);
-        postRepository.put(postId, post);
-        return post;
-    }
+    @Query("""
+        select p
+        from Post p
+        join fetch p.user
+        where p.deletedAt is null
+        order by p.id desc
+    """)
+    List<Post> findFirstPage(Pageable pageable);
 
-    // 게시글 목록 조회
-    public List<Post> findAll(){
-        return new ArrayList<>(postRepository.values());
-    }
+    @Query("""
+        select p
+        from Post p
+        join fetch p.user
+        where p.id < :lastPostId
+          and p.deletedAt is null
+        order by p.id desc
+    """)
+    List<Post> findNextPage(
+            @Param("lastPostId") Long lastPostId,
+            Pageable pageable
+    );
 
-    // 게시글 상세 조회
-    public Optional<Post> findById(Long postId){
-        return Optional.ofNullable(postRepository.get(postId));
-    }
-
-    // 게시글 삭제
-    public void deleteById(Long postId){
-        Post post = postRepository.get(postId);
-
-        if(post==null){
-            return;
-        }
-
-        post.delete();
-    }
+    @Query("""
+        select p
+        from Post p
+        join fetch p.user
+        where p.id = :postId
+          and p.deletedAt is null
+    """)
+    Optional<Post> findByIdWithUser(
+            @Param("postId") Long postId
+    );
 }

@@ -30,12 +30,12 @@ public class PostReplyResponse {
         }
 
         return new PostReplyResponse(
-                reply.getReplyId(),
+                reply.getId(),
                 nickname,
                 profileImage,
                 reply.getContent(),
                 isAuthorDeleted,
-                reply.isReplyDeleted(),
+                reply.isDeleted(),
                 reply.getCreatedAt()
         );
     }
