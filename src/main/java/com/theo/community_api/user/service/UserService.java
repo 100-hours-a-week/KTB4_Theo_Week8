@@ -1,11 +1,13 @@
 package com.theo.community_api.user.service;
 
 import com.theo.community_api.auth.service.AuthService;
+import com.theo.community_api.common.config.PasswordConfig;
 import com.theo.community_api.common.exception.*;
 import com.theo.community_api.user.domain.User;
 import com.theo.community_api.user.dto.*;
 import com.theo.community_api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
     private final UserRepository userRepository;
     private final AuthService authService;
+    private final PasswordEncoder passwordEncoder;
+
+    // 회원 정보 조회
+    public UserResponse getUser(Long loginUserId) {
+        User user = userRepository.findById(loginUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return UserResponse.from(user);
+    }
 
     // 회원가입
     @Transactional
@@ -34,12 +45,16 @@ public class UserService {
             throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXIST);
         }
 
+        // 비밀번호 해시 처리: 암호화
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+
         // 사용자 추가
         User user = new User(
                 request.getEmail(),
-                request.getPassword(),
+                encodedPassword,
                 request.getNickname(),
                 request.getProfileImage());
+
         User savedUser = userRepository.save(user);
 
         return savedUser.getId();
@@ -47,17 +62,17 @@ public class UserService {
 
     // 로그인
     @Transactional
-    public String login(LoginRequest request) {
+    public String login(LoginRequest request, String currentSessionId) {
         // 이메일로 사용자 찾기
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
-        // 비밀번호와 유저 비밀번호가 같은지 확인
-        if (!user.getPassword().equals(request.getPassword())) {
+        // 비밀번호와 DB 내 비밀번호(해시된 비밀번호)와 같은지 확인
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        return authService.createSession(user.getId()); // 세션 ID 반환
+        return authService.createSession(user.getId(), currentSessionId); // 세션 ID 반환
     }
 
     // 회원정보 수정
@@ -99,7 +114,12 @@ public class UserService {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
 
-        user.updatePassword(request.getPassword());
+        if(passwordEncoder.matches(request.getPassword(), user.getPassword())){
+            throw new BusinessException(ErrorCode.SAME_PASSWORD);
+        }
+
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        user.updatePassword(encodedPassword);
     }
 
     // 회원 탈퇴

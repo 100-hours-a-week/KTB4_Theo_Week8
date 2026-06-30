@@ -68,14 +68,6 @@ public class Post {
         this.viewCount++;
     }
 
-    public void increaseReportCount() {
-        this.reportedCount++;
-
-        if (this.reportedCount >= 5) {
-            this.isBlinded = true;
-        }
-    }
-
     public void increaseCommentCount() {
         this.commentCount++;
     }

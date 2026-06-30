@@ -39,6 +39,7 @@ public enum ErrorCode { // 비즈니스 예외 모음
     EMAIL_ALREADY_EXIST(HttpStatus.CONFLICT, "email_already_exist"),
     NICKNAME_ALREADY_EXIST(HttpStatus.CONFLICT, "nickname_already_exist"),
     SAME_NICKNAME(HttpStatus.CONFLICT, "same_nickname"),
+    SAME_PASSWORD(HttpStatus.CONFLICT, "same password"),
     DUPLICATE_REPORT(HttpStatus.CONFLICT, "duplicate_report"),
     DRAFT_ALREADY_EXISTS(HttpStatus.CONFLICT, "draft_already_exists"),
     ALREADY_REPORTED_POST(HttpStatus.CONFLICT, "already_reported_post"),

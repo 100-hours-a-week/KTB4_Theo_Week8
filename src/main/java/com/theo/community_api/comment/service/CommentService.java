@@ -78,13 +78,13 @@ public class CommentService {
 
         Post post = comment.getPost();
 
-        // 대댓글이 존재하는 댓글인지 확인
-        boolean hasReplies = replyRepository.existsActiveByCommentId(commentId);
-
-        if (hasReplies) {
-            comment.deleteKeepReplies();
-            return;
-        }
+//        // 대댓글이 존재하는 댓글인지 확인
+//        boolean hasReplies = replyRepository.existsActiveByCommentId(commentId);
+//
+//        if (hasReplies) {
+//            comment.delete();
+//            return;
+//        }
 
         comment.delete();
         post.decreaseCommentCount();

@@ -19,6 +19,19 @@ public class UserController {
     private final UserService userService;
     private final AuthService authService;
 
+    // 회원 정보 가져오기
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserResponse>> getUser(
+            @CookieValue(value = "JSESSIONID", required = false) String sessionId
+    ){
+        Long loginUserId = authService.getLoginUserId(sessionId);
+
+        UserResponse response = userService.getUser(loginUserId);
+
+        return ResponseEntity
+                .ok(ApiResponse.of("get_user_success", response));
+    }
+
     // 회원가입
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<Long>> signup(
@@ -34,9 +47,10 @@ public class UserController {
     // 로그인
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Void>> login(
-            @Valid @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request,
+            @CookieValue(name = "JSESSIONID", required = false) String currentSessionId
     ) {
-        String sessionId = userService.login(request);
+        String sessionId = userService.login(request, currentSessionId);
 
         ResponseCookie cookie = ResponseCookie.from("JSESSIONID",sessionId)
                 .httpOnly(true)
@@ -70,6 +84,8 @@ public class UserController {
     ) {
         Long loginUserId = authService.getLoginUserId(sessionId);
         userService.updatePassword(loginUserId, request);
+
+
 
         return ResponseEntity
                 .ok(ApiResponse.of("password_update_success"));

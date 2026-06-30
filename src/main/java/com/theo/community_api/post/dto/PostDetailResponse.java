@@ -24,13 +24,16 @@ public class PostDetailResponse { // 게시물 상세조회
     private boolean isEdited;
     private boolean isAuthorDeleted;
     private boolean isBlinded;
+    private boolean isAuthor;
 
     private List<String> imageUrls;
     private List<PostCommentResponse> comments;
 
+
     public static PostDetailResponse from(
             Post post
             , User user
+            , Long loginUserId
             , boolean liked
             , List<String> imageUrls
             , List<PostCommentResponse> comments) {
@@ -42,6 +45,12 @@ public class PostDetailResponse { // 게시물 상세조회
             nickname = user.getNickname();
             profileImage = user.getProfileImage();
             isAuthorDeleted = false;
+        }
+
+        boolean isAuthor = false;
+
+        if(user != null && user.getId().equals(loginUserId)){ // 로그인한 사용자가 게시글 작성자인지 확인
+            isAuthor = true;
         }
 
         return new PostDetailResponse(
@@ -57,6 +66,7 @@ public class PostDetailResponse { // 게시물 상세조회
                 post.isEdited(),
                 isAuthorDeleted,
                 post.isBlinded(),
+                isAuthor,
                 imageUrls,
                 comments
         );

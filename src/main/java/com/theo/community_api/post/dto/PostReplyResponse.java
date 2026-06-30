@@ -16,9 +16,10 @@ public class PostReplyResponse {
     private String replyContent;
     private boolean isAuthorDeleted;
     private boolean isReplyDeleted;
+    private boolean isAuthor;
     private LocalDateTime createdAt;
 
-    public static PostReplyResponse from(Reply reply, User user) {
+    public static PostReplyResponse from(Reply reply, User user, Long loginUserId) {
         String nickname = "알 수 없음";
         String profileImage = null;
         boolean isAuthorDeleted = true;
@@ -29,6 +30,12 @@ public class PostReplyResponse {
             isAuthorDeleted = false;
         }
 
+        boolean isAuthor = false;
+
+        if (user != null && user.getId().equals(loginUserId)) {
+            isAuthor = true;
+        }
+
         return new PostReplyResponse(
                 reply.getId(),
                 nickname,
@@ -36,6 +43,7 @@ public class PostReplyResponse {
                 reply.getContent(),
                 isAuthorDeleted,
                 reply.isDeleted(),
+                isAuthor,
                 reply.getCreatedAt()
         );
     }

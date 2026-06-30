@@ -17,12 +17,14 @@ public class PostCommentResponse {
     private String commentContent;
     private boolean isAuthorDeleted;
     private boolean isCommentDeleted;
+    private boolean isAuthor;
     private LocalDateTime createdAt;
     private List<PostReplyResponse> replies;
 
     public static PostCommentResponse from(
             Comment comment,
             User user,
+            Long loginUserId,
             List<PostReplyResponse> replies
     ) {
         String nickname = "알 수 없음";
@@ -41,6 +43,12 @@ public class PostCommentResponse {
             content = "삭제된 댓글입니다.";
         }
 
+        boolean isAuthor = false;
+
+        if (user != null && user.getId().equals(loginUserId)) {
+            isAuthor = true;
+        }
+
         return new PostCommentResponse(
                 comment.getId(),
                 nickname,
@@ -48,6 +56,7 @@ public class PostCommentResponse {
                 content,
                 isAuthorDeleted,
                 comment.isDeleted(),
+                isAuthor,
                 comment.getCreatedAt(),
                 replies
         );

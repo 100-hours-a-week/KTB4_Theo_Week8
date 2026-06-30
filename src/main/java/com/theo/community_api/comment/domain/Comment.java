@@ -50,11 +50,6 @@ public class Comment {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void deleteKeepReplies() { // 대댓글이 존재하는 경우에는 삭제되어서는 안되므로
-        this.content = "삭제된 댓글입니다.";
-        this.deletedAt = LocalDateTime.now();
-    }
-
     public void delete(){
         this.deletedAt = LocalDateTime.now();
     }

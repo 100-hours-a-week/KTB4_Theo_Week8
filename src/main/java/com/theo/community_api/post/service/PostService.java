@@ -137,7 +137,7 @@ public class PostService {
                 User replyAuthor = reply.getUser();
 
                 replyResponses.add(
-                        PostReplyResponse.from(reply, replyAuthor)
+                        PostReplyResponse.from(reply, replyAuthor, loginUserId)
                 );
             }
 
@@ -147,7 +147,7 @@ public class PostService {
             }
 
             commentResponses.add(
-                    PostCommentResponse.from(comment, commentAuthor, replyResponses)
+                    PostCommentResponse.from(comment, commentAuthor, loginUserId, replyResponses)
             );
         }
 
@@ -162,7 +162,7 @@ public class PostService {
 
         boolean liked = postLikeRepository.existsByPostIdAndUserId(postId, loginUserId);
 
-        return PostDetailResponse.from(post, postAuthor, liked, imageUrls, commentResponses);
+        return PostDetailResponse.from(post, postAuthor, loginUserId, liked, imageUrls, commentResponses);
     }
 
     // 게시글 수정

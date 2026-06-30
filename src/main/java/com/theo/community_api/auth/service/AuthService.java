@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -23,9 +24,27 @@ public class AuthService {
 
     // 세션ID 생성
     @Transactional
-    public String createSession(Long userId) {
+    public String createSession(Long userId, String currentSessionId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 현재 요청에 기존 쿠키가 있는 경우
+        if (currentSessionId != null && !currentSessionId.isBlank()) {
+            Optional<LoginSession> optionalSession =
+                    sessionRepository.findBySessionId(currentSessionId);
+
+            if (optionalSession.isPresent()) {
+                LoginSession session = optionalSession.get();
+
+                boolean sameUser = session.getUser().getId().equals(userId);
+                boolean notExpired = !session.isExpired();
+
+                // 같은 브라우저의 기존 세션이고, 같은 유저고, 아직 만료되지 않았다면 재사용
+                if (sameUser && notExpired) {
+                    return session.getSessionId();
+                }
+            }
+        }
 
         String sessionId = UUID.randomUUID().toString();
 
@@ -57,5 +76,10 @@ public class AuthService {
         }
 
         sessionRepository.deleteBySessionId(sessionId);
+    }
+
+    @Transactional
+    public int deleteExpiredSessions() { // 만료된 세션 전체 삭제
+        return sessionRepository.deleteExpiredSessions(LocalDateTime.now());
     }
 }

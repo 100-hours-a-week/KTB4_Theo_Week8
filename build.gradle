@@ -22,6 +22,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web' // 스프링 웹
 	implementation 'org.springframework.boot:spring-boot-starter-validation' // valid
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc' // 선택: 코드로 쿼리 테스트 시 권장
+	implementation 'org.springframework.security:spring-security-crypto' // 암호화 및 해시 도구 (비밀번호)
 	runtimeOnly 'com.h2database:h2' // H2는 런타임 의존성으로 추가
 	testImplementation 'org.springframework.boot:spring-boot-starter-test' //테스트 코드 작성에 필요
 	compileOnly 'org.projectlombok:lombok'
