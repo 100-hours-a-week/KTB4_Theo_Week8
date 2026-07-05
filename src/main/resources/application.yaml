@@ -1,4 +1,8 @@
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
   application:
     name: community-api
 
@@ -19,6 +23,12 @@ spring:
   sql:
     init:
       mode: always
+
+jwt:
+  secret: iOsi3s86cKGiyvD1FBxVj5Z8k8mbW4ShBsNzAgna7aI=
+  access-token-expiration: 1800000
+  refresh-token-expiration: 604800000
+  issuer: community-api
 
 logging:
   level:

@@ -1,7 +1,7 @@
 package com.theo.community_api.user.service;
 
+import com.theo.community_api.auth.dto.IssuedTokens;
 import com.theo.community_api.auth.service.AuthService;
-import com.theo.community_api.common.config.PasswordConfig;
 import com.theo.community_api.common.exception.*;
 import com.theo.community_api.user.domain.User;
 import com.theo.community_api.user.dto.*;
@@ -23,6 +23,10 @@ public class UserService {
     public UserResponse getUser(Long loginUserId) {
         User user = userRepository.findById(loginUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.isDeleted()) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
 
         return UserResponse.from(user);
     }
@@ -62,17 +66,20 @@ public class UserService {
 
     // 로그인
     @Transactional
-    public String login(LoginRequest request, String currentSessionId) {
+    public IssuedTokens login(LoginRequest request, String currentRefreshToken) {
         // 이메일로 사용자 찾기
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
         // 비밀번호와 DB 내 비밀번호(해시된 비밀번호)와 같은지 확인
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        if (user.isDeleted() || user.getPassword() == null
+                || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_CREDENTIALS
+            );
         }
 
-        return authService.createSession(user.getId(), currentSessionId); // 세션 ID 반환
+        return authService.createTokens(user, currentRefreshToken);
     }
 
     // 회원정보 수정
@@ -132,7 +139,8 @@ public class UserService {
         if(user.isDeleted()){
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
-
+        // 해당 회원 refreshToken DB에서 삭제
+        authService.revokeAllForUser(user.getId());
         user.delete();
     }
 }

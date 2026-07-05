@@ -1,0 +1,100 @@
+package com.theo.community_api.common.config;
+
+import com.theo.community_api.auth.security.JwtAccessDeniedHandler;
+import com.theo.community_api.auth.security.JwtAuthenticationEntryPoint;
+import com.theo.community_api.auth.security.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http)
+            throws Exception {
+
+        http
+                // 기존 CORS 설정 Bean 사용
+                .cors(Customizer.withDefaults())
+
+                // Authorization 헤더로 JWT를 전달하므로 비활성화
+                .csrf(csrf -> csrf.disable())
+
+                // 서버 세션에 인증정보를 저장하지 않음
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler(jwtAccessDeniedHandler)
+                )
+
+                // H2 Console iframe 허용
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.sameOrigin())
+                )
+
+                .authorizeHttpRequests(auth -> auth
+                        // CORS 사전 요청 허용
+                        .requestMatchers(HttpMethod.OPTIONS, "/**")
+                        .permitAll()
+
+                        // H2 Console 허용
+                        .requestMatchers(PathRequest.toH2Console())
+                        .permitAll()
+
+                        // 회원가입과 로그인, 리프레시 토큰 재발급, 로그아웃은 허용
+                        .requestMatchers(
+                                "/users/signup",
+                                "/auth/login",
+                                "/auth/reissue",
+                                "/auth/logout",
+                                "/error",
+                                "/images/**"
+                        ).permitAll()
+
+                        // 관리자 API
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // 나머지 API는 JWT 인증 필요
+                        .anyRequest()
+                        .authenticated()
+                )
+
+                // JWT 필터 등록
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+}

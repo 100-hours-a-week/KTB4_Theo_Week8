@@ -17,17 +17,26 @@ repositories {
 	mavenCentral()
 }
 
+configurations {
+	mockitoAgent
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // Spring Data Jpa
 	implementation 'org.springframework.boot:spring-boot-starter-web' // 스프링 웹
 	implementation 'org.springframework.boot:spring-boot-starter-validation' // valid
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc' // 선택: 코드로 쿼리 테스트 시 권장
-	implementation 'org.springframework.security:spring-security-crypto' // 암호화 및 해시 도구 (비밀번호)
+	implementation 'org.springframework.boot:spring-boot-starter-security' // spring security 추가
+	implementation 'io.jsonwebtoken:jjwt-api:0.13.0' // JWT 생성 및 검증 API
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0' // JWT 구현체
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0' // JWT JSON 직렬화/역직렬화
 	runtimeOnly 'com.h2database:h2' // H2는 런타임 의존성으로 추가
 	testImplementation 'org.springframework.boot:spring-boot-starter-test' //테스트 코드 작성에 필요
+	mockitoAgent('org.mockito:mockito-core') {
+		transitive = false
+	}
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
@@ -35,4 +44,5 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	jvmArgs += "-javaagent:${configurations.mockitoAgent.asPath}"
 }

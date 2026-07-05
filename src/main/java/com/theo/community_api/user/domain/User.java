@@ -16,6 +16,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private final UserRole role = UserRole.USER;
+
     @Column(nullable = false, length = 255, unique = true)
     private String email;
 

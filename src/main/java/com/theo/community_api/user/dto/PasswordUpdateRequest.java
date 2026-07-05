@@ -18,4 +18,9 @@ public class PasswordUpdateRequest {
 
     @NotBlank(message = "blank_password")
     private String passwordConfirm;
+
+    public PasswordUpdateRequest(String password, String passwordConfirm) {
+        this.password = password;
+        this.passwordConfirm = passwordConfirm;
+    }
 }

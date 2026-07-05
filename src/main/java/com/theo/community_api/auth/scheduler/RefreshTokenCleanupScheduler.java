@@ -6,18 +6,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
-@Slf4j
-public class SessionCleanupScheduler {
+public class RefreshTokenCleanupScheduler {
 
     private final AuthService authService;
 
-    // 매일 새벽 3시에 만료 세션 전체 삭제
+    // 매일 새벽 3시에 만료된 Refresh Token 정리
     @Scheduled(cron = "0 0 3 * * *")
-    public void cleanupExpiredSessions() {
-        int deletedCount = authService.deleteExpiredSessions();
-
-        log.info("만료 세션 정리 완료 - 삭제된 세션 수: {}", deletedCount);
+    public void cleanupExpiredRefreshTokens() {
+        authService.deleteExpiredRefreshTokens();
     }
 }

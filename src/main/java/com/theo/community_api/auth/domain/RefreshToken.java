@@ -9,35 +9,40 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="sessions")
+@Table(name = "refresh_tokens")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LoginSession {
+public class RefreshToken {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 36, unique = true)
-    private String sessionId;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="userId", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @Column(nullable = false, unique = true, length = 64)
+    private String tokenHash;
+
+    @Column(nullable = false)
+    private LocalDateTime expiresAt;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
-    private LocalDateTime expiredAt;
-
-    public LoginSession(String sessionId, User user, LocalDateTime expiredAt){
-        this.sessionId = sessionId;
+    public RefreshToken(
+            User user,
+            String tokenHash,
+            LocalDateTime expiresAt
+    ) {
         this.user = user;
+        this.tokenHash = tokenHash;
+        this.expiresAt = expiresAt;
         this.createdAt = LocalDateTime.now();
-        this.expiredAt = expiredAt;
     }
 
-    public boolean isExpired(){
-        return expiredAt.isBefore(LocalDateTime.now());
+    public boolean isExpired() {
+        return expiresAt.isBefore(LocalDateTime.now());
     }
 }

@@ -1,6 +1,6 @@
 package com.theo.community_api.reply.controller;
 
-import com.theo.community_api.auth.service.AuthService;
+import com.theo.community_api.auth.security.CustomUserDetails;
 import com.theo.community_api.common.ApiResponse;
 import com.theo.community_api.reply.dto.ReplyCreateRequest;
 import com.theo.community_api.reply.dto.ReplyCreateResponse;
@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,18 +18,16 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ReplyController {
     private final ReplyService replyService;
-    private final AuthService authService;
 
     // 대댓글 작성
     @PostMapping
     public ResponseEntity<ApiResponse<ReplyCreateResponse>> createReply(
-            @CookieValue(value = "JSESSIONID", required = false) String sessionId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId,
             @PathVariable Long commentId,
             @Valid @RequestBody ReplyCreateRequest request
     ) {
-        Long loginUserId = authService.getLoginUserId(sessionId);
-        Long replyId = replyService.createReply(loginUserId, postId, commentId, request);
+        Long replyId = replyService.createReply(userDetails.getUserId(), postId, commentId, request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -41,14 +40,13 @@ public class ReplyController {
     // 대댓글 수정
     @PatchMapping("/{replyId}")
     public ResponseEntity<ApiResponse<Void>> updateReply(
-            @CookieValue(value = "JSESSIONID", required = false) String sessionId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId,
             @PathVariable Long commentId,
             @PathVariable Long replyId,
             @Valid @RequestBody ReplyUpdateRequest request
     ) {
-        Long loginUserId = authService.getLoginUserId(sessionId);
-        replyService.updateReply(loginUserId, postId, commentId, replyId, request);
+        replyService.updateReply(userDetails.getUserId(), postId, commentId, replyId, request);
 
         return ResponseEntity
                 .ok(ApiResponse.of("reply_modify_success"));
@@ -57,13 +55,12 @@ public class ReplyController {
     // 대댓글 삭제
     @DeleteMapping("/{replyId}")
     public ResponseEntity<ApiResponse<Void>> deleteReply(
-            @CookieValue(value = "JSESSIONID", required = false) String sessionId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId,
             @PathVariable Long commentId,
             @PathVariable Long replyId
     ) {
-        Long loginUserId = authService.getLoginUserId(sessionId);
-        replyService.deleteReply(loginUserId, postId, commentId, replyId);
+        replyService.deleteReply(userDetails.getUserId(), postId, commentId, replyId);
 
         return ResponseEntity
                 .ok(ApiResponse.of("reply_delete_success"));

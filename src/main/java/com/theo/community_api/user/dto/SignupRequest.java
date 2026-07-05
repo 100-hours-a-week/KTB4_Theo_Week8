@@ -34,4 +34,18 @@ public class SignupRequest {
     private String nickname;
 
     private String profileImage;
+
+    public SignupRequest(
+            String email,
+            String password,
+            String passwordConfirm,
+            String nickname,
+            String profileImage
+    ) {
+        this.email = email;
+        this.password = password;
+        this.passwordConfirm = passwordConfirm;
+        this.nickname = nickname;
+        this.profileImage = profileImage;
+    }
 }

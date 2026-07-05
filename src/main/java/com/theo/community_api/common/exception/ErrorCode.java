@@ -16,6 +16,10 @@ public enum ErrorCode { // 비즈니스 예외 모음
     // 401
     UNAUTHORIZED_REQUEST(HttpStatus.UNAUTHORIZED, "unauthorized_request"),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "invalid_credentials"),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "invalid_refresh_token"),
+    ACCESS_TOKEN_REQUIRED(HttpStatus.UNAUTHORIZED, "access_token_required"),
+    ACCESS_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "access_token_expired"),
+    INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "invalid_access_token"),
 
     // 403
     POST_BLINDED(HttpStatus.FORBIDDEN, "post_blinded"),
@@ -25,6 +29,7 @@ public enum ErrorCode { // 비즈니스 예외 모음
     COMMENT_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "comment_delete_forbidden"),
     REPLY_MODIFY_FORBIDDEN(HttpStatus.FORBIDDEN, "reply_modify_forbidden"),
     REPLY_DELETE_FORBIDDEN(HttpStatus.FORBIDDEN, "reply_delete_forbidden"),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "access_denied"),
 
     // 404
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "user_not_found"),
@@ -39,7 +44,7 @@ public enum ErrorCode { // 비즈니스 예외 모음
     EMAIL_ALREADY_EXIST(HttpStatus.CONFLICT, "email_already_exist"),
     NICKNAME_ALREADY_EXIST(HttpStatus.CONFLICT, "nickname_already_exist"),
     SAME_NICKNAME(HttpStatus.CONFLICT, "same_nickname"),
-    SAME_PASSWORD(HttpStatus.CONFLICT, "same password"),
+    SAME_PASSWORD(HttpStatus.CONFLICT, "same_password"),
     DUPLICATE_REPORT(HttpStatus.CONFLICT, "duplicate_report"),
     DRAFT_ALREADY_EXISTS(HttpStatus.CONFLICT, "draft_already_exists"),
     ALREADY_REPORTED_POST(HttpStatus.CONFLICT, "already_reported_post"),
