@@ -1,10 +1,12 @@
 package com.theo.community_api.draft.domain;
 
+import com.theo.community_api.common.BaseTimeEntity;
 import com.theo.community_api.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
 
@@ -12,7 +14,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "draft")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Draft {
+public class Draft extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -27,6 +29,7 @@ public class Draft {
     @Column(columnDefinition = "TEXT", nullable = true)
     private String content;
 
+    @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
@@ -34,16 +37,6 @@ public class Draft {
         this.user = user;
         this.title = title;
         this.content = content;
-    }
-
-    @PrePersist
-    public void prePersist() { // 영속성 컨텍스트 내 객체 등록 시
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    public void preUpdate() { // 변화 감지로 인해 UPDATE 쿼리 직전 실행
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void update(String title, String content) {

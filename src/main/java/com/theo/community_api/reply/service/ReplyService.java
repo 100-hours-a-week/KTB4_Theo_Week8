@@ -36,6 +36,10 @@ public class ReplyService {
         Comment comment = commentRepository.findActiveByPostIdAndCommentId(postId, commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
+        if (comment.getPost().isBlinded()) {
+            throw new BusinessException(ErrorCode.POST_BLINDED);
+        }
+
         Reply reply = new Reply(comment, user, request.getContent());
 
         Reply savedReply = replyRepository.save(reply);

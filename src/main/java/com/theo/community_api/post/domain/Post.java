@@ -1,10 +1,12 @@
 package com.theo.community_api.post.domain;
 
+import com.theo.community_api.common.BaseTimeEntity;
 import com.theo.community_api.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
 
@@ -12,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "posts")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Post {
+public class Post extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -43,6 +45,7 @@ public class Post {
     private int reportedCount = 0;
 
     @Column(nullable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
     @Column(nullable = true)
@@ -55,7 +58,6 @@ public class Post {
         this.user = user;
         this.title = title;
         this.content = content;
-        this.createdAt = LocalDateTime.now();
     }
 
     public void update(String title, String content) {

@@ -1,11 +1,14 @@
 package com.theo.community_api.comment.domain;
 
+import com.theo.community_api.common.BaseTimeEntity;
 import com.theo.community_api.post.domain.Post;
 import com.theo.community_api.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
 
@@ -13,7 +16,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "comments")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Comment {
+public class Comment extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -29,9 +32,11 @@ public class Comment {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @CreatedDate
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @LastModifiedDate
     @Column(nullable = true)
     private LocalDateTime updatedAt;
 
@@ -47,7 +52,6 @@ public class Comment {
 
     public void update(String content) {
         this.content = content;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public void delete(){

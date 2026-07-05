@@ -36,12 +36,4 @@ public interface ReplyRepository extends JpaRepository<Reply, Long> {
             @Param("commentId") Long commentId,
             @Param("replyId") Long replyId
     );
-
-    @Query("""
-    select count(r) > 0
-    from Reply r
-    where r.comment.id = :commentId
-      and r.deletedAt is null
-    """) // 댓글에 연결된 대댓글이 최소 하나 이상 존재하는지 확인
-    boolean existsActiveByCommentId(@Param("commentId") Long commentId);
 }
