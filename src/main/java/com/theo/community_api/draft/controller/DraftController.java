@@ -4,6 +4,7 @@ import com.theo.community_api.auth.security.CustomUserDetails;
 import com.theo.community_api.common.ApiResponse;
 import com.theo.community_api.draft.dto.DraftRequest;
 import com.theo.community_api.draft.dto.DraftResponse;
+import com.theo.community_api.draft.dto.DraftSummaryResponse;
 import com.theo.community_api.draft.service.DraftService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,10 +33,10 @@ public class DraftController {
 
     // 내 임시글 목록 조회
     @GetMapping
-    public ResponseEntity<ApiResponse<List<DraftResponse>>> readMyDrafts(
+    public ResponseEntity<ApiResponse<List<DraftSummaryResponse>>> readMyDrafts(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<DraftResponse> response = draftService.readDraftList(userDetails.getUserId());
+        List<DraftSummaryResponse> response = draftService.readDraftList(userDetails.getUserId());
 
         return ResponseEntity.ok(ApiResponse.of("draft_list_read_success", response));
     }

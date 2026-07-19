@@ -1,5 +1,7 @@
 package com.theo.community_api.user;
 
+import com.theo.community_api.auth.dto.IssuedTokens;
+import com.theo.community_api.auth.service.AuthService;
 import com.theo.community_api.common.exception.BusinessException;
 import com.theo.community_api.common.exception.ErrorCode;
 import com.theo.community_api.user.domain.User;
@@ -14,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -32,11 +35,14 @@ class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AuthService authService;
+
     @InjectMocks
     private UserService userService;
 
     @Test
-    @DisplayName("회원가입에 성공하면 저장된 회원 ID를 반환한다")
+    @DisplayName("회원가입에 성공하면 요청 정보로 회원을 저장하고 저장된 회원 ID를 반환한다")
     void signup_success() {
         // given
         SignupRequest request = new SignupRequest(
@@ -47,18 +53,32 @@ class UserServiceTest {
                 null
         );
 
-        User savedUser = mock(User.class);
-        given(savedUser.getId()).willReturn(1L);
+        given(passwordEncoder.encode("Password123!"))
+                .willReturn("encodedPassword");
 
         given(userRepository.save(any(User.class)))
-                .willReturn(savedUser);
+                .willAnswer(invocation -> {
+                    User user = invocation.getArgument(0);
+                    // user 객체의 id 필드에 1L 값을 저장하라.
+                    ReflectionTestUtils.setField(user, "id", 1L);
+                    return user;
+                });
 
         // when
-        Long userId = userService.signup(request);
+        Long result = userService.signup(request);
 
         // then
-        assertThat(userId).isEqualTo(1L);
-        verify(userRepository).save(any(User.class));
+        assertThat(result).isEqualTo(1L);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
+        verify(userRepository).save(userCaptor.capture());
+        // userRepository.save() 가 호출됐을 때 전달된 User 객체를 가져오기
+        User savedUser = userCaptor.getValue();
+
+        assertThat(savedUser.getEmail()).isEqualTo("theo1234@gmail.com");
+        assertThat(savedUser.getNickname()).isEqualTo("theo");
+        assertThat(savedUser.getPassword()).isEqualTo("encodedPassword");
     }
 
     @Test
@@ -73,16 +93,20 @@ class UserServiceTest {
                 null
         );
 
-
-
-        // when : 회원가입 시도, then : 비밀번호 불일치 에러 발생!
+        // when : 회원가입 시도
         BusinessException exception = assertThrows(
                 BusinessException.class,
                 () -> userService.signup(request) // when
         );
 
+        // then : 비밀번호 불일치 에러 발생 및 검증
         assertThat(exception.getErrorCode())
                 .isEqualTo(ErrorCode.PASSWORD_MISMATCH);
+
+        verify(userRepository, never()) // 회원가입 함수 호출되어서는 안된다.
+                .save(any(User.class));
+
+        verifyNoInteractions(passwordEncoder); // 비밀번호 암호화 실행되서는 안된다.
     }
 
     @Test
@@ -107,6 +131,11 @@ class UserServiceTest {
 
         assertThat(exception.getErrorCode())
                 .isEqualTo(ErrorCode.EMAIL_ALREADY_EXIST);
+
+        verify(userRepository, never()) // 회원가입 함수 호출되어서는 안된다.
+                .save(any(User.class));
+
+        verifyNoInteractions(passwordEncoder); // 비밀번호 암호화 실행되서는 안된다.
     }
 
     @Test
@@ -216,12 +245,7 @@ class UserServiceTest {
         // given
         Long userId = 1L;
 
-        User deletedUser = new User(
-                "theo1234@gmail.com",
-                "encoded-password",
-                "theo",
-                null
-        );
+        User deletedUser = createDeletedUser();
 
         deletedUser.delete();
 
@@ -343,17 +367,51 @@ class UserServiceTest {
     }
 
     @Test
+    @DisplayName("탈퇴한 회원의 정보 수정을 요청 시 UNAUTHORIZED_REQUEST가 발생한다")
+    void updateUser_fail_when_unauthorized() {
+        // given
+        Long userId = 1L;
+
+        User deletedUser = createDeletedUser();
+
+        given(userRepository.findById(userId))
+                .willReturn(Optional.of(deletedUser));
+
+        deletedUser.delete();
+
+        // when
+        UserUpdateRequest request = new UserUpdateRequest(
+                "newTheo",
+                "new-profile.png"
+        );
+
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> userService.updateUser(userId, request)
+        );
+
+        // then
+        assertThat(exception.getErrorCode())
+                .isEqualTo(ErrorCode.UNAUTHORIZED_REQUEST);
+
+        verify(userRepository, never()) // 탈퇴한 회원이면 닉네임 중복검사가 호출되면 안된다
+                .existsByNickname(any());
+
+        assertThat(deletedUser.getNickname()) // 탈퇴한 회원의 닉네임은 "알 수 없음"으로 처리되야 한다.
+                .isEqualTo("알 수 없음");
+
+        assertThat(deletedUser.getProfileImage()) // 프로필 이미지는 null이 되어야 한다.
+                .isNull();
+    }
+
+    @Test
     @DisplayName("비밀번호를 암호화하여 변경한다")
     void updatePassword_success() {
         // given
         Long userId = 1L;
 
-        User user = new User(
-                "theo1234@gmail.com",
-                "encoded-old-password",
-                "theo",
-                null
-        );
+        User user = createUser();
 
         PasswordUpdateRequest request =
                 new PasswordUpdateRequest(
@@ -386,21 +444,11 @@ class UserServiceTest {
         // given
         Long userId = 1L;
 
-        User user = new User(
-                "theo1234@gmail.com",
-                "encoded-old-password",
-                "theo",
-                null
-        );
-
         PasswordUpdateRequest request =
                 new PasswordUpdateRequest(
                         "NewPassword123!",
                         "DifferentPassword123!"
                 );
-
-        given(userRepository.findById(userId))
-                .willReturn(Optional.of(user));
 
         // when
         BusinessException exception = assertThrows(
@@ -411,6 +459,9 @@ class UserServiceTest {
         // then
         assertThat(exception.getErrorCode())
                 .isEqualTo(ErrorCode.PASSWORD_MISMATCH);
+
+        verifyNoInteractions(userRepository);
+        verifyNoInteractions(passwordEncoder);
     }
 
     @Test
@@ -421,7 +472,7 @@ class UserServiceTest {
 
         User user = new User(
                 "theo1234@gmail.com",
-                "encoded-old-password",
+                "encoded-old-password", // 중복되는 비밀번호 작성
                 "theo",
                 null
         );
@@ -450,5 +501,223 @@ class UserServiceTest {
         assertThat(exception.getErrorCode())
                 .isEqualTo(ErrorCode.SAME_PASSWORD);
     }
-}
 
+    @Test
+    @DisplayName("회원 탈퇴에 성공하면 refreshToken을 제거하고 회원을 탈퇴 처리한다.")
+    void deleteUser_success() {
+        // given
+        Long userId = 1L;
+
+        User user = createUser();
+        ReflectionTestUtils.setField(user, "id", userId);
+
+        given(userRepository.findById(userId))
+                .willReturn(Optional.of(user));
+
+        // when
+        userService.deleteUser(userId);
+
+        // then
+        verify(authService).revokeAllForUser(userId);
+
+        assertThat(user.isDeleted()).isTrue();
+        assertThat(user.getEmail()).isEqualTo("deleted_user_" + userId + "@deleted.local");
+        assertThat(user.getPassword()).isNull();
+        assertThat(user.getNickname()).isEqualTo("알 수 없음");
+        assertThat(user.getProfileImage()).isNull();
+    }
+
+    @Test
+    @DisplayName("이미 탈퇴한 회원을 다시 탈퇴하려 한다면 USER_NOT_FOUND 예외 발생")
+    void deleteUser_fail_when_user_already_deleted(){
+        // given
+        Long userId = 1L;
+        User deletedUser = createUser();
+        ReflectionTestUtils.setField(deletedUser, "id", userId);
+        deletedUser.delete();
+
+        given(userRepository.findById(userId))
+            .willReturn(Optional.of(deletedUser));
+
+        // when
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> userService.deleteUser(userId)
+        );
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    @DisplayName("로그인에 성공하면 토큰을 발급한다")
+    void login_success() {
+        // given
+        LoginRequest request = createLoginRequest();
+
+        String currentRefreshToken = "old-refresh-token";
+
+        User user = createUser();
+        ReflectionTestUtils.setField(user, "id", 1L);
+
+        IssuedTokens issuedTokens = new IssuedTokens(
+                "access-token",
+                "refresh-token",
+                "Bearer",
+                1800000L // 30분
+        );
+
+        given(userRepository.findByEmail(request.getEmail()))
+                .willReturn(Optional.of(user));
+
+        given(passwordEncoder.matches(request.getPassword(), user.getPassword()))
+                .willReturn(true);
+
+        given(authService.createTokens(user, currentRefreshToken))
+                .willReturn(issuedTokens);
+
+        // when
+        IssuedTokens result = userService.login(request, currentRefreshToken);
+
+        // then
+        assertThat(result).isEqualTo(issuedTokens);
+
+        verify(authService).createTokens(user, currentRefreshToken);
+    }
+
+    @Test
+    @DisplayName("이메일에 해당하는 회원이 없으면 로그인에 실패한다")
+    void login_fail_when_email_not_found() {
+        // given
+        LoginRequest request = new LoginRequest(
+                "unknown@gmail.com",
+                "Password123!"
+        );
+
+        given(userRepository.findByEmail(request.getEmail()))
+                .willReturn(Optional.empty());
+
+        // when
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> userService.login(request, null)
+        );
+
+        // then
+        assertThat(exception.getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+
+        verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    @DisplayName("비밀번호가 일치하지 않으면 로그인에 실패한다")
+    void login_fail_when_password_mismatch() {
+        // given
+        LoginRequest request = new LoginRequest(
+                "theo1234@gmail.com",
+                "WrongPassword123!"
+        );
+
+        User user = createUser();
+
+        given(userRepository.findByEmail(request.getEmail()))
+                .willReturn(Optional.of(user));
+
+        given(passwordEncoder.matches(request.getPassword(), user.getPassword()))
+                .willReturn(false);
+
+        // when
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> userService.login(request, null)
+        );
+
+        // then
+        assertThat(exception.getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    @DisplayName("탈퇴한 회원은 로그인할 수 없다")
+    void login_fail_when_user_deleted() {
+        // given
+        LoginRequest request = createLoginRequest();
+
+        User deletedUser = createUser();
+        ReflectionTestUtils.setField(deletedUser, "id", 1L);
+        deletedUser.delete();
+
+        given(userRepository.findByEmail(request.getEmail()))
+                .willReturn(Optional.of(deletedUser));
+
+        // when
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> userService.login(request, null)
+        );
+
+        // then
+        assertThat(exception.getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+
+        verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    @DisplayName("비밀번호가 없는 회원은 로그인할 수 없다")
+    void login_fail_when_password_is_null() {
+        // given
+        LoginRequest request = createLoginRequest();
+
+        User user = new User(
+                "theo1234@gmail.com",
+                null,
+                "theo",
+                null
+        );
+
+        given(userRepository.findByEmail(request.getEmail()))
+                .willReturn(Optional.of(user));
+
+        // when
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> userService.login(request, null)
+        );
+
+        // then
+        assertThat(exception.getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+
+        verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(authService);
+    }
+
+    private User createUser() {
+        return new User(
+                "theo1234@gmail.com",
+                "encoded-password",
+                "theo",
+                null
+        );
+    }
+
+    private User createDeletedUser() {
+        User user = createUser();
+        user.delete();
+        return user;
+    }
+
+    private LoginRequest createLoginRequest() {
+        return new LoginRequest(
+                "theo1234@gmail.com",
+                "Password123!"
+        );
+    }
+}

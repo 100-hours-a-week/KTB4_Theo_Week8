@@ -183,7 +183,7 @@ public class PostService {
         post.update(request.getTitle(), request.getContent());
 
         // 기존 이미지 삭제 후 새로운 이미지로 저장 (개선필요 부분)
-        postImageRepository.deleteAllByPost_Id(postId);
+        postImageRepository.deleteAllByPostIdInBulk(postId);
         savePostImages(post, request.getImageUrls());
 
         return new PostUpdateResponse(post.isEdited());
@@ -200,7 +200,7 @@ public class PostService {
         }
 
         // 게시글 삭제 시 기존 이미지 모두 삭제
-        postImageRepository.deleteAllByPost_Id(postId);
+        postImageRepository.deleteAllByPostIdInBulk(postId);
         post.delete();
     }
 

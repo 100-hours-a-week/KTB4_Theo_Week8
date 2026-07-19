@@ -20,4 +20,9 @@ public class LoginRequest {
             message = "invalid_password_format"
     )
     private String password;
+
+    public LoginRequest(String email, String password) {
+        this.email = email;
+        this.password = password;
+    }
 }

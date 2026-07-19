@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.0'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
 }
 
 group = 'com.theo'
@@ -31,7 +32,8 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0' // JWT 구현체
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0' // JWT JSON 직렬화/역직렬화
 	runtimeOnly 'com.h2database:h2' // H2는 런타임 의존성으로 추가
-	testImplementation 'org.springframework.boot:spring-boot-starter-test' //테스트 코드 작성에 필요
+	testImplementation 'org.springframework.boot:spring-boot-starter-test' // 일반 테스트 코드 작성에 필요
+	testImplementation 'org.springframework.security:spring-security-test' // 보안 필터 활용 테스트 코드 작성에 필요
 	mockitoAgent('org.mockito:mockito-core') {
 		transitive = false
 	}

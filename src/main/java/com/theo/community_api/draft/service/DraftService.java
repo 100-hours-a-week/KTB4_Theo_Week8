@@ -6,6 +6,7 @@ import com.theo.community_api.draft.domain.DraftImage;
 import com.theo.community_api.draft.dto.DraftImageResponse;
 import com.theo.community_api.draft.dto.DraftRequest;
 import com.theo.community_api.draft.dto.DraftResponse;
+import com.theo.community_api.draft.dto.DraftSummaryResponse;
 import com.theo.community_api.draft.repository.DraftImageRepository;
 import com.theo.community_api.draft.repository.DraftRepository;
 import com.theo.community_api.post.domain.Post;
@@ -53,13 +54,13 @@ public class DraftService {
     }
 
     // 내 임시글 목록 조회
-    public List<DraftResponse> readDraftList(Long loginUserId) {
+    public List<DraftSummaryResponse> readDraftList(Long loginUserId) {
         List<Draft> drafts = draftRepository.findAllByUserIdOrderByUpdatedAtDesc(loginUserId);
 
-        List<DraftResponse> responses = new ArrayList<>();
+        List<DraftSummaryResponse> responses = new ArrayList<>();
 
         for (Draft draft : drafts) {
-            responses.add(toDraftResponse(draft));
+            responses.add(DraftSummaryResponse.from(draft));
         }
 
         return responses;
@@ -88,7 +89,7 @@ public class DraftService {
         draft.update(request.getTitle(), request.getContent());
 
         // 덮어쓰기 정책: 기존 이미지 접누 삭제 후 새로운 이미지로 모두 저장
-        draftImageRepository.deleteAllByDraftId(draft.getId());
+        draftImageRepository.deleteAllByDraftIdInBulk(draft.getId());
         saveDraftImages(draft, request.getImageUrls());
 
         return toDraftResponse(draft);
@@ -101,7 +102,7 @@ public class DraftService {
         Draft draft = draftRepository.findByIdAndUserId(draftId, loginUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DRAFT_NOT_FOUND));
 
-        draftImageRepository.deleteAllByDraftId(draft.getId());
+        draftImageRepository.deleteAllByDraftIdInBulk(draft.getId());
         draftRepository.delete(draft);
     }
 

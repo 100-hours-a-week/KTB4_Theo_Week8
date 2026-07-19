@@ -15,6 +15,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
         from Post p
         join fetch p.user
         where p.deletedAt is null
+          and p.isBlinded = false
         order by p.id desc
     """)
     List<Post> findFirstPage(Pageable pageable);
@@ -25,6 +26,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
         join fetch p.user
         where p.id < :lastPostId
           and p.deletedAt is null
+          and p.isBlinded = false
         order by p.id desc
     """)
     List<Post> findNextPage(
@@ -38,6 +40,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
         join fetch p.user
         where p.id = :postId
           and p.deletedAt is null
+          and p.isBlinded = false
     """)
     Optional<Post> findByIdWithUser(
             @Param("postId") Long postId

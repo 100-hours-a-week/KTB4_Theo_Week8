@@ -113,13 +113,12 @@ public class UserService {
     // 비밀번호 수정
     @Transactional
     public void updatePassword(Long loginUserId, PasswordUpdateRequest request) {
-
-        User user = userRepository.findById(loginUserId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
         if (!request.getPassword().equals(request.getPasswordConfirm())) {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
+
+        User user = userRepository.findById(loginUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if(passwordEncoder.matches(request.getPassword(), user.getPassword())){
             throw new BusinessException(ErrorCode.SAME_PASSWORD);
@@ -139,6 +138,7 @@ public class UserService {
         if(user.isDeleted()){
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
+
         // 해당 회원 refreshToken DB에서 삭제
         authService.revokeAllForUser(user.getId());
         user.delete();
