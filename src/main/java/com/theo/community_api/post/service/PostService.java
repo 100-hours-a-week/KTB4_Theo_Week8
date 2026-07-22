@@ -3,6 +3,7 @@ package com.theo.community_api.post.service;
 import com.theo.community_api.comment.domain.Comment;
 import com.theo.community_api.comment.repository.CommentRepository;
 import com.theo.community_api.common.exception.*;
+import com.theo.community_api.notification.service.NotificationService;
 import com.theo.community_api.post.domain.*;
 import com.theo.community_api.post.dto.*;
 import com.theo.community_api.post.repository.*;
@@ -30,6 +31,7 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     private final PostViewRepository postViewRepository;
     private final PostRevisionRepository postRevisionRepository;
+    private final NotificationService notificationService;
 
     // 게시글 추가
     @Transactional
@@ -242,7 +244,7 @@ public class PostService {
         Optional<PostLike> optionalPostLike =
                 postLikeRepository.findByPostIdAndUserId(postId, loginUserId);
 
-        // 이미 좋아요 누른 상태에서 다시 누르면 이전 좋아요 이력 삭제, 좋아요 개수 감소
+        // 이미 좋아요 누른 상태에서 다시 누르면 이전 좋아요 이력 삭제, 좋아요 개수 감소, 알림 생성 하지않고 종료
         if (optionalPostLike.isPresent()) {
             postLikeRepository.delete(optionalPostLike.get());
             post.decreaseLikeCount();
@@ -253,6 +255,10 @@ public class PostService {
         PostLike postLike = new PostLike(post, user);
         postLikeRepository.save(postLike);
         post.increaseLikeCount();
+
+        notificationService.createLikeNotification(
+                post, user // 수신 게시물, 행위자 actor
+        );
 
         return new PostLikeResponse(true, post.getLikeCount());
     }

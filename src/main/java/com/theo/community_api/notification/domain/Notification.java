@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Table(
         name="notifications",
         uniqueConstraints={
-                @UniqueConstraint(
+                @UniqueConstraint( // 중복 추가를 방지
                         name = "uk_notification_source_actor",
                         columnNames = {
                                 "type",
@@ -28,11 +28,11 @@ import java.time.LocalDateTime;
                 )
         },
         indexes = {
-                @Index(
+                @Index( // 수신자 인덱스처리
                         name = "idx_notification_receiver_id_id",
                         columnList = "receiver_id, id"
                 ),
-                @Index(
+                @Index( // 아직 읽지 않은 수신자 인덱스 처리
                         name = "idx_notification_receiver_read_at",
                         columnList = "receiver_id, read_at"
                 )
@@ -66,7 +66,7 @@ public class Notification extends BaseTimeEntity {
     private NotificationSourceType sourceType;
 
     // 좋아요 대상 게시글, 작성된 댓글, 작성된 답글
-    @Column(name = "source_Id", nullable = false)
+    @Column(name = "source_id", nullable = false)
     private Long sourceId;
 
     // 알림 클릭 시 이동할 게시글
